@@ -18,19 +18,19 @@ AS BEGIN
 	BEGIN TRANSACTION
 
 		IF @Nombre IS NULL OR @Nombre = ''
-		RAISERROR('El nombre no puede ser nulo ni vacío', 16, 1);
+		RAISERROR('El nombre no puede ser nulo ni vacï¿½o', 16, 1);
 
 		IF @Apellido IS NULL OR @Apellido = ''
-		RAISERROR('El apellido no puede ser nulo ni vacío', 16, 1);
+		RAISERROR('El apellido no puede ser nulo ni vacï¿½o', 16, 1);
 
 		IF @Direccion IS NULL OR @Direccion = ''
-		RAISERROR('La dirección no puede ser nula ni vacío', 16, 1);
+		RAISERROR('La direcciï¿½n no puede ser nula ni vacï¿½o', 16, 1);
 
 		IF @Telefono IS NULL OR @Telefono = ''
-		RAISERROR('El teléfono no puede ser nulo ni vacío', 16, 1);
+		RAISERROR('El telï¿½fono no puede ser nulo ni vacï¿½o', 16, 1);
 
 		IF @Email IS NULL OR @Email = ''
-		RAISERROR('El email no puede ser nulo ni vacío', 16, 1);
+		RAISERROR('El email no puede ser nulo ni vacï¿½o', 16, 1);
 
 		-------------------------------------------------
         -- VALIDAR DUPLICADOS (EMAIL)
@@ -43,10 +43,10 @@ AS BEGIN
         -- VALIDAR FORMATO DE EMAIL
         -------------------------------------------------
 		IF @Email NOT LIKE '%@%.%'
-		RAISERROR('El formato de email no es válido', 16, 1);
+		RAISERROR('El formato de email no es vï¿½lido', 16, 1);
 
 		-------------------------------------------------
-        -- INSERCIÓN SI TODO ES CORRECTO
+        -- INSERCIï¿½N SI TODO ES CORRECTO
         -------------------------------------------------
 
 		INSERT INTO Socios(Nombre, Apellido, Direccion, Telefono, Email)
@@ -85,10 +85,10 @@ AS BEGIN
 	BEGIN TRANSACTION
 
 		IF @ISBN IS NULL OR @ISBN = ''
-		RAISERROR('El ISBN no puede ser nulo ni vacío', 16, 1);
+		RAISERROR('El ISBN no puede ser nulo ni vacï¿½o', 16, 1);
 
 		IF @Titulo IS NULL OR @Titulo = ''
-		RAISERROR('El Título no puede ser nulo ni vacío', 16, 1);
+		RAISERROR('El Tï¿½tulo no puede ser nulo ni vacï¿½o', 16, 1);
 
 		-------------------------------------------------
         -- VALIDAR CANTIDADES
@@ -108,7 +108,7 @@ AS BEGIN
 		RAISERROR ('El ISBN ingresado ya existe', 16, 1);
 
 		-------------------------------------------------
-        -- INSERCIÓN SI TODO ES CORRECTO
+        -- INSERCIï¿½N SI TODO ES CORRECTO
         -------------------------------------------------
 
 		INSERT INTO Libros(ISBN, Titulo, FechaPublicacion, EjemplaresTotales, EjemplaresDisponibles)
@@ -174,10 +174,10 @@ AS BEGIN
 			-- VALIDAR FECHAS
 			-------------------------------------------------
 			IF @FechaPrestamo > @FechaDevolucionEsperada
-			RAISERROR('La fecha de préstamo no puede ser posterior a la fecha de devolución esperada', 16, 1);
+			RAISERROR('La fecha de prï¿½stamo no puede ser posterior a la fecha de devoluciï¿½n esperada', 16, 1);
 
 			-------------------------------------------------
-			-- INSERCIÓN SI TODO ES CORRECTO
+			-- INSERCIï¿½N SI TODO ES CORRECTO
 			-------------------------------------------------
 			INSERT INTO Prestamos(IDSocio, IDEmpleado, IDLibro, FechaPrestamo, FechaDevolucionEsperada)
 			VALUES(@IDSocio, @IDEmpleado, @IDLibro, @FechaPrestamo, @FechaDevolucionEsperada);
@@ -193,7 +193,7 @@ AS BEGIN
         -------------------------------------------------
 
 		ROLLBACK TRANSACTION;
-		PRINT 'ERROR AL AGREGAR PRÉSTAMO: ' + ERROR_MESSAGE();
+		PRINT 'ERROR AL AGREGAR PRï¿½STAMO: ' + ERROR_MESSAGE();
 
 	END CATCH
 END
@@ -202,9 +202,9 @@ END
 
 
 --====================
--- Carga de Devolución
+-- Carga de Devoluciï¿½n
 --====================
-
+GO
 CREATE PROCEDURE sp_Agregar_Devolucion
 @IDPrestamo INT,
 @FechaDevolucionReal DATE
@@ -216,28 +216,28 @@ AS BEGIN
 		BEGIN TRANSACTION
 			
 			-------------------------------------------------
-			-- VALIDAR EXISTENCIA DE PRÉSTAMO
+			-- VALIDAR EXISTENCIA DE PRï¿½STAMO
 			-------------------------------------------------
 			IF NOT EXISTS (SELECT 1 FROM Prestamos WHERE IDPrestamo = @IDPrestamo)
-			RAISERROR('No existe el préstamo ingresado', 16, 1);
+			RAISERROR('No existe el prï¿½stamo ingresado', 16, 1);
 
 			-------------------------------------------------
-			-- VALIDAR QUE NO ESTÉ REGISTRADA LA DEVOLUCIÓN
+			-- VALIDAR QUE NO ESTï¿½ REGISTRADA LA DEVOLUCIï¿½N
 			-------------------------------------------------
 			IF EXISTS (SELECT 1 FROM Prestamos WHERE IDPrestamo = @IDPrestamo AND FechaDevolucionReal IS NOT NULL)
-			RAISERROR('Se encuentra registrada la devolución', 16, 1);
+			RAISERROR('Se encuentra registrada la devoluciï¿½n', 16, 1);
 
 			-------------------------------------------------
-			-- VALIDAR QUE LA FECHA DE DEVOLUCIÓN SEA VÁLIDA
+			-- VALIDAR QUE LA FECHA DE DEVOLUCIï¿½N SEA Vï¿½LIDA
 			-------------------------------------------------
 			DECLARE @FechaPrestamo DATE;
 			SELECT @FechaPrestamo = FechaPrestamo FROM Prestamos WHERE IDPrestamo = @IDPrestamo;
 
 			IF @FechaDevolucionReal < @FechaPrestamo
-			RAISERROR('La fecha de devolución no puede ser anterior a la fecha de préstamo', 16, 1);
+			RAISERROR('La fecha de devoluciï¿½n no puede ser anterior a la fecha de prï¿½stamo', 16, 1);
 
 			-------------------------------------------------
-			-- INGRESAR FECHA DE DEVOLUCIÓN
+			-- INGRESAR FECHA DE DEVOLUCIï¿½N
 			-------------------------------------------------
 
 			UPDATE Prestamos
@@ -254,7 +254,7 @@ AS BEGIN
         -------------------------------------------------
 
 		ROLLBACK TRANSACTION;
-		PRINT 'ERROR AL AGREGAR DEVOLUCIÓN: ' + ERROR_MESSAGE();
+		PRINT 'ERROR AL AGREGAR DEVOLUCIï¿½N: ' + ERROR_MESSAGE();
 
 	END CATCH
 END
@@ -267,16 +267,16 @@ END
 --=======================================================
 -- sp_Reporte_MultasPorSocio
 --=======================================================
--- Descripción:
+-- Descripciï¿½n:
 -- Este procedimiento elabora un reporte de las multas
--- registradas para un socio específico, mostrando los
+-- registradas para un socio especï¿½fico, mostrando los
 -- datos del socio (ID del socio, Nombre y Apellido), 
--- el ID del préstamo, el ID de la multa, el monto de 
--- cada multa y la fecha de la multa. Además mostrará
+-- el ID del prï¿½stamo, el ID de la multa, el monto de 
+-- cada multa y la fecha de la multa. Ademï¿½s mostrarï¿½
 -- un resumen con la cantidad total de multas y el monto
 -- acumulado.
-==========================================================
-
+--==========================================================
+GO
 CREATE PROCEDURE sp_Reporte_MultasPorSocio
 @IDSocio INT
 AS BEGIN

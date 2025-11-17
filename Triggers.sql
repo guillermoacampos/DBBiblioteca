@@ -49,7 +49,6 @@ BEGIN
     END CATCH
 END
 GO
-
 -- =========================================================
 --     2) Al actualizar Prestamos (cuando se registra la devolución):
 --     - Detecta filas cuyo FechaDevolucionReal cambia de NULL -> NOT NULL
@@ -62,41 +61,68 @@ ON Prestamos
 AFTER UPDATE
 AS
 BEGIN
-    BEGIN TRY
-        -- Filas que pasaron de sin devolver (deleted.FechaDevolucionReal IS NULL)
-        -- a devuelto (inserted.FechaDevolucionReal IS NOT NULL)
-        ;WITH Devoluciones AS (
-            SELECT i.IDPrestamo, i.IDLibro, i.FechaDevolucionEsperada, i.FechaDevolucionReal
-            FROM inserted i
-            JOIN deleted d ON d.IDPrestamo = i.IDPrestamo
-            WHERE d.FechaDevolucionReal IS NULL AND i.FechaDevolucionReal IS NOT NULL
-        )
-        -- 1) Incrementar EjemplaresDisponibles por libro según cantidad de devoluciones
-        UPDATE l
-        SET l.EjemplaresDisponibles = l.EjemplaresDisponibles + d.CntDevoluciones
-        FROM Libros l
-        JOIN (
-            SELECT IDLibro, COUNT(*) AS CntDevoluciones
-            FROM Devoluciones
-            GROUP BY IDLibro
-        ) d ON l.IDLibro = d.IDLibro;
+    SET NOCOUNT ON;
 
-        -- 2) Generar multas para las devoluciones tardías
-        DECLARE @TasaPorDia MONEY = 1.00; 
+    DECLARE @TasaPorDia MONEY = 1.00;
+
+    -- Recolectar las devoluciones: filas que pasaron de FechaDevolucionReal IS NULL -> NOT NULL
+    DECLARE @Devoluciones TABLE (
+        IDPrestamo INT,
+        IDLibro INT,
+        FechaDevolucionEsperada DATE,
+        FechaDevolucionReal DATE
+    );
+
+    INSERT INTO @Devoluciones (IDPrestamo, IDLibro, FechaDevolucionEsperada, FechaDevolucionReal)
+    SELECT i.IDPrestamo, i.IDLibro, i.FechaDevolucionEsperada, i.FechaDevolucionReal
+    FROM inserted i
+    JOIN deleted d ON d.IDPrestamo = i.IDPrestamo
+    WHERE d.FechaDevolucionReal IS NULL
+      AND i.FechaDevolucionReal IS NOT NULL;
+
+    -- Si no hay devoluciones, salir
+    IF NOT EXISTS (SELECT 1 FROM @Devoluciones)
+        RETURN;
+
+    -- 1) Incrementar EjemplaresDisponibles por libro según cantidad de devoluciones
+    UPDATE l
+    SET l.EjemplaresDisponibles = l.EjemplaresDisponibles + a.CntDevoluciones
+    FROM Libros l
+    JOIN (
+        SELECT IDLibro, COUNT(*) AS CntDevoluciones
+        FROM @Devoluciones
+        GROUP BY IDLibro
+    ) a ON l.IDLibro = a.IDLibro;
+
+    -- 2) Generar multas para devoluciones tardías (inserción segura, evitando duplicados)
+    BEGIN TRY
         INSERT INTO Multas (IDPrestamo, Monto, FechaGenerada, Estado)
         SELECT 
             dv.IDPrestamo,
             CAST(DATEDIFF(DAY, dv.FechaDevolucionEsperada, dv.FechaDevolucionReal) * @TasaPorDia AS MONEY) AS Monto,
             dv.FechaDevolucionReal AS FechaGenerada,
             CAST(1 AS BIT) AS Estado
-        FROM Devoluciones dv
-        WHERE DATEDIFF(DAY, dv.FechaDevolucionEsperada, dv.FechaDevolucionReal) > 0;
+        FROM @Devoluciones dv
+        WHERE DATEDIFF(DAY, dv.FechaDevolucionEsperada, dv.FechaDevolucionReal) > 0
+          AND NOT EXISTS (
+              SELECT 1 FROM Multas m WHERE m.IDPrestamo = dv.IDPrestamo
+          );
     END TRY
     BEGIN CATCH
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END CATCH
-END
+        -- Loguear el error en tabla de debug si existe, si no, imprimir
+        DECLARE @err NVARCHAR(4000) = ERROR_MESSAGE();
+        IF OBJECT_ID('dbo.DebugTriggerLog') IS NOT NULL
+        BEGIN
+            INSERT INTO dbo.DebugTriggerLog (TriggerName, ErrorMessage)
+            VALUES ('tr_Prestamos_AfterUpdate_Devolucion', @err);
+        END
+        ELSE
+        BEGIN
+            PRINT 'TRIGGER ERROR (tr_Prestamos_AfterUpdate_Devolucion): ' + ISNULL(@err,'(sin mensaje)');
+        END
+        -- NO hacemos ROLLBACK aquí para no deshacer el UPDATE del procedimiento llamador.
+    END CATCH;
+END;
 GO
 
 -- =========================================================
