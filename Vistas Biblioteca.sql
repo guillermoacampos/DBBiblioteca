@@ -1,7 +1,7 @@
 USE DBBiblioteca;
 GO
 
--========================================================
+--=======================================================
 --Vista: Vista_Libros_Catalogo
 --Descripción: 
 --Esta vista muestra información detallada de los libros 
@@ -30,7 +30,7 @@ GO
 
 
 
--================================================================
+--===============================================================
 --Vista: Vista_Prestamos_Vigentes
 --Descripción: 
 --Esta vista muestra un listado de los prestamos activos, 
@@ -56,7 +56,7 @@ GO
 
 
 
--================================================================
+--===============================================================
 --Vista: Vista_Multas
 --Descripción: 
 --Esta vista muestra un listado con las multas registradas por
@@ -77,5 +77,33 @@ INNER JOIN Prestamos p
 INNER JOIN Socios s
 	ON p.IDSocio = s.IDSocio
 GROUP BY s.IDSocio, s.Nombre, s.Apellido;
+
+GO
+
+
+
+--================================================================
+--Vista: Vista_Atrasos
+--Descripción: 
+--Esta vista muestra un listado con los atrasos, apoyándose en 
+--funciones de usuario para su ejecución.
+--===============================================================
+
+CREATE VIEW Vista_Atrasos
+AS SELECT
+	p.IDPrestamo,
+	s.IDSocio,
+	s.Nombre + ' ' + s.Apellido AS [Nombre del Socio],
+	l.IDLibro,
+	l.Titulo AS [Título del Libro],
+	p.FechaPrestamo,
+	p.FechaDevolucionEsperada,
+	p.FechaDevolucionReal,
+	dbo.fn_Dias_Atraso(p.IDPrestamo) AS [Días de Atraso]
+FROM Prestamos p
+INNER JOIN Socios s
+	ON p.IDSocio = s.IDSocio
+INNER JOIN Libros l
+	ON p.IDLibro = l.IDLibro;
 
 GO
